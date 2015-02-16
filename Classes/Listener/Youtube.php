@@ -22,50 +22,33 @@ class Youtube extends \Library\IRC\Listener\Base {
 		if ($ytTitle)
 		{
 			$args = $this->getArguments($data);
-			$this->say(sprintf("01,00You00,05Tube %s", $ytTitle),$args[2]);
+			$this->say( $ytTitle,$args[2]);
 		}
 	}
 
 	private function getYtTitle($data)
 	{
 		
-		preg_match('/https?:\/\/(?:www.)?(?:youtu.be|youtube.com)\/(?:[a-zA-Z0-9_?=]+)/', $data, $matches);
+		preg_match('#\bhttps?://[^\s()<>]+(?:\([\w\d]+\)|([^[:punct:]\s]|/))#', $data, $matches);
 		if (!empty($matches) && !empty($matches[0]))
 		{
 			// We've got a YT URL. Parse it.
-			$matches = parse_url($matches[0]);
-			
-			// We could have parsed a youtube.com link which parses in more pieces, and one piece must always be the same.
-			// We take advantage of this.
-			if ($matches['path'] == '/watch')
-				$vid_id = substr($matches['query'], 2);
-				
-			// Otherwise we have a youtu.be link.
-			// In that case, the video ID is automatically the part after the youtu.be URL.
-			else
-				$vid_id = substr($matches['path'], 1);
-			
-			// We got a video ID longer or smaller than 11 characters...? That's, um, special.
-			if (empty($vid_id) || strlen($vid_id) != 11)
-				return false;
-			
-			// Put it into the final URL.
-			$ytApi	= sprintf($this->apiUri, $vid_id);
-			
-			// Make a request.
-			$Ytdata	= func::fetch($ytApi);
-			
-			// Attempt to fetch the title from the garbage we received.
-			preg_match("/(?<=<title type=\'text\'>).*(?=<\/title>)/", $Ytdata, $ytTitle);
-			
-			// And return it.
-			return $ytTitle[0];
+			$matches = $matches[0];
+            return $this->getTitle($matches) . ' - ' . $matches;
+
 		}
 		
 		// Sorry pals, non-YouTube URLs ain't going to cut it.
 		return false;
 	}
-	
+
+    function getTitle($Url){
+        $str = file_get_contents($Url);
+        if(strlen($str)>0){
+            preg_match("/\<title\>(.*)\<\/title\>/",$str,$title);
+            return $title[1];
+        }
+    }
 
 	/**
 	* Returns keywords that listener is listening to.
@@ -73,6 +56,6 @@ class Youtube extends \Library\IRC\Listener\Base {
 	* @return array
 	*/
 	public function getMessageKeywords() {
-		return array('youtu.be', 'youtube.com');
+		return array('http://','https://');
 	}
 }
